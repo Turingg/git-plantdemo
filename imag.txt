@@ -3,7 +3,5 @@ hello ! 555
 hello !
 hello !
 hello !
-hello !
-hello !
 hello ! master test
-hello !
+hello ! hot-fix text
