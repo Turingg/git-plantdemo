@@ -1,7 +1,21 @@
-hello ! 2222222222
-hello ! 555
-hello !
-hello !
-hello !
-hello ! master test
-hello ! hot-fix text
+#导入两个开发库
+import urllib.request 
+from bs4 import BeautifulSoup
+#定义图像的url地址（就是你想要爬取的网址）
+domain = 'https://www.ivsky.com/'
+#在大多数网站都会有反爬取机制，所以我们这里以修改UserAgent的方式来模拟浏览器的形式来骗过该机制
+req = urllib.request.Request(domain)
+req.add_header('Host','www.ivsky.com')
+req.add_header('Referer','https://www.ivsky.com/')
+req.add_header('User-Agent','fake-client')
+#接下来通过urllib.request的urlopen()函数来打开网页并发出请求，获得数据，再通过read()函数读取获得的数据，代码如下：
+html = urllib.request.urlopen(req)
+info = html.read()
+print('打印info','\n',info)#将结果打印出来，验证是否成功
+
+soup = BeautifulSoup(info,'html.parser')
+#这里使用开发库BeautifulSoup4的一个类BeautifulSoup，来实例化我们的对象info，
+#让其相当于一个页面，使其HTML页面结构成为BeautifulSoup的属性，
+#函数的第二个参数是指定使用HTML解释器
+all_img = soup.find_all('img',class_ = 'i71-img')#通过find_all()函数进行筛选，筛选条件是img标签并且表示属性class为i71-img
+print("打印all_img",all_img)#打印输出筛选出的图片信息
