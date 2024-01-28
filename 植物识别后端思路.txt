@@ -1,0 +1,114 @@
+需要安装的依赖：
+django
+baidu-aip
+
+1、创建Django项目：
+在命令行终端中运行以下命令来创建一个新的Django项目：
+django-admin startproject mysite
+
+2、进入项目目录：
+运行以下命令进入项目目录：
+cd mysite
+
+3、创建Django应用程序：
+运行以下命令创建一个名为myscan的Django应用程序：
+python manage.py startapp myscan
+
+在mysite/mysite/settings.py中添加
+INSTALLED_APPS = [
+   ...
+    'myscan.apps.MyscanConfig',
+]
+进行注册
+
+4、配置百度智能云API：
+在项目目录中创建一个名为config.py的文件，也就是与manage.py文件同级的位置，并添加以下内容：
+# config.py
+
+APP_ID = 'your_app_id'
+API_KEY = 'your_api_key'
+SECRET_KEY = 'your_secret_key'
+
+5、创建视图：
+在myscan/views.py文件中添加以下代码来创建一个接收图片并进行植物识别的视图：
+from django.shortcuts import render
+
+from aip import AipImageClassify
+import base64
+from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.exceptions import ParseError
+from django.http import JsonResponse
+
+from mysite.config import APP_ID, API_KEY, SECRET_KEY
+
+# Create your views here.
+
+# 创建百度植物识别API客户端对象
+client = AipImageClassify(APP_ID, API_KEY, SECRET_KEY)
+
+
+class PhotoUploadView(APIView):
+    # 定义解析器类列表，用于解析multipart/form-data类型和form表单类型的数据
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, *args, **kwargs):
+        try:
+            photo = request.FILES.get('photo')  # 获取上传的照片文件
+            if not photo:
+                raise ParseError("No file was submitted")
+
+            # 进行照片处理和其他逻辑操作
+
+            # 调用百度植物识别接口
+            image_data = photo.read()
+
+            # 将图片转换为base64编码格式
+            image_base64 = base64.b64encode(image_data).decode('utf-8')
+
+            result = client.plantDetect(image_base64)
+
+            # 处理识别结果
+            if 'result' in result and result['result']:
+                plant_name = result['result'][0]['name']
+                probability = result['result'][0]['score']
+                # 构建植物信息界面URL
+                plant_info_url = f"https://baike.baidu.com/item/{plant_name}"
+                return JsonResponse(
+                    {'plant_name': plant_name, 'probability': probability, 'plant_info_url': plant_info_url})
+            else:
+                return JsonResponse({'error': '未识别到植物'}, status=404)
+        # 处理异常情况
+        except ParseError as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+这段代码是一个基于Django REST Framework框架的后端视图类，用于处理安卓app上传的照片文件并调用百度植物识别接口来识别植物。具体的流程如下：
+	首先，我们从POST请求中获取上传的照片文件photo，如果没有上传文件则返回错误。
+
+	接着，我们读取照片文件数据并将其转换为base64编码格式，然后调用百度植物识别接口并传入图片数据。
+
+	如果识别成功，则从接口返回的结果中提取出植物名称、识别概率和植物信息URL，并以JSON格式作为响应数据返回给安卓app。
+
+	如果无法识别植物，则返回错误信息。
+
+
+6、配置URL：
+myscan下创建urls.py，添加以下内容：
+from django.urls import path
+from .views import PhotoUploadView
+
+urlpatterns = [
+    path('upload/', PhotoUploadView.as_view(), name='photo_upload'),
+]
+
+mysite\urls.py的urlpatterns中添加
+# myscan的URL路由
+path('api/', include('myscan.urls')),
+
+7、运行开发服务器：
+在命令行终端中运行以下命令来启动Django开发服务器：
+python manage.py runserver
+服务器将在本地运行
+
+8、在安卓app中发送请求：
+在安卓app中，使用合适的方法将图片数据作为POST请求发送到http://localhost:8000/api/recognize-plant/地址。接收到响应后，在安卓app上显示植物的信息界面，可以使用识别结果中的相关信息来搜索百度百科页面的植物信息界面。
